@@ -18,7 +18,7 @@ const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS||"Not set"
+    pass: process.env.EMAIL_PASS
   }
 });
 
@@ -64,6 +64,25 @@ app.get("/health", async (req, res) => {
   }
 });
 
+
+// Verify OTP Endpoint
+app.post('/api/verify-otp', async (req, res) => {
+  const { email, otp } = req.body;
+  try {
+    const storedOtp = otpStore.get(email);
+    if (!storedOtp || storedOtp.otp !== parseInt(otp)) {
+      return res.status(400).json({ error: "Invalid OTP" });
+    }
+    if (Date.now() > storedOtp.expires) {
+      otpStore.delete(email);
+      return res.status(400).json({ error: "OTP expired" });
+    }
+    res.status(200).json({ message: "OTP verified successfully" });
+  } catch (err) {
+    console.error("OTP verification error:", err);
+    res.status(500).json({ error: "OTP verification failed" });
+  }
+});
 
 // Send OTP Endpoint
 app.post('/api/send-otp', async (req, res) => {
